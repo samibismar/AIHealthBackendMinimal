@@ -51,3 +51,21 @@ def get_logs():
         return jsonify({"logs": logs})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/match-specialty", methods=["POST"])
+def match_specialty():
+    data = request.get_json()
+    symptom = data.get("symptom", "")
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a helpful health assistant. Given a medical symptom or description, respond with only the type of doctor or medical specialty the patient should see. Keep it very short."},
+                {"role": "user", "content": f"What kind of doctor should someone see if they are experiencing: {symptom}?"}
+            ]
+        )
+        specialty = response['choices'][0]['message']['content'].strip()
+        return jsonify({"specialty": specialty})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
