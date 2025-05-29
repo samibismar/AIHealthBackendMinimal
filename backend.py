@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import openai
 import json
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -23,6 +24,21 @@ def explain():
             ]
         )
         explanation = response['choices'][0]['message']['content']
+
+        # Save to logs.json
+        log_entry = {
+            "symptom": symptom,
+            "explanation": explanation,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        logs = []
+        if os.path.exists("logs.json"):
+            with open("logs.json", "r") as f:
+                logs = json.load(f)
+        logs.append(log_entry)
+        with open("logs.json", "w") as f:
+            json.dump(logs, f)
+
         return jsonify({"explanation": explanation})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
