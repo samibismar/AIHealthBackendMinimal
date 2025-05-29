@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import openai
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -23,5 +24,14 @@ def explain():
         )
         explanation = response['choices'][0]['message']['content']
         return jsonify({"explanation": explanation})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/logs", methods=["GET"])
+def get_logs():
+    try:
+        with open("logs.json", "r") as f:
+            logs = json.load(f)
+        return jsonify({"logs": logs})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
