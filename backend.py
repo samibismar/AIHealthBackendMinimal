@@ -4,6 +4,7 @@ import os
 import openai
 import json
 from datetime import datetime
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -72,17 +73,43 @@ def match_specialty():
 @app.route("/find-doctors", methods=["POST"])
 def find_doctors():
     data = request.get_json()
-    specialty = data.get("specialty", "").lower()
+    specialty = data.get("specialty", "")
+    lat = data.get("latitude")
+    lon = data.get("longitude")
 
-    # Sample mock doctor database
-    mock_doctors = [
-        {"name": "Dr. Emily Zhang", "specialty": "dermatologist", "location": "Downtown Clinic", "phone": "555-123-4567"},
-        {"name": "Dr. Raj Patel", "specialty": "cardiologist", "location": "Heart Health Center", "phone": "555-987-6543"},
-        {"name": "Dr. Maya Lopez", "specialty": "pediatrician", "location": "Family Care Pediatrics", "phone": "555-222-3344"},
-        {"name": "Dr. James Kim", "specialty": "otolaryngologist", "location": "Ear, Nose & Throat Associates", "phone": "555-333-2211"},
-        {"name": "Dr. Sarah Green", "specialty": "dentist", "location": "Bright Smile Dental", "phone": "555-456-7890"},
-    ]
+    if not lat or not lon:
+        return jsonify({"error": "Missing latitude or longitude"}), 400
 
-    matching_doctors = [doc for doc in mock_doctors if specialty in doc["specialty"].lower()]
+    try:
+        # Sample request to the NPI Registry API (replace or extend with a more powerful API if needed)
+        response = requests.get(
+            "https://npiregistry.cms.hhs.gov/api/",
+            params={
+                "version": "2.1",
+                "limit": 10,
+                "taxonomy_description": specialty,
+                "postal_code": "",  # Optional if you have it
+                "latitude": lat,
+                "longitude": lon
+            }
+        )
 
-    return jsonify({"doctors": matching_doctors})
+        results = response.json().get("results", [])
+
+        doctors = []
+        for r in results:
+            basic = r.get("basic", {})
+            addresses = r.get("addresses", [])
+            address = addresses[0] if addresses else {}
+
+            doctors.append({
+                "name": f"{basic.get('first_name', '')} {basic.get('last_name', '')}".strip(),
+                "specialty": specialty,
+                "location": address.get("city", "") + ", " + address.get("state", ""),
+                "phone": address.get("telephone_number", "N/A")
+            })
+
+        return jsonify({"doctors": doctors})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
