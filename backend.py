@@ -69,3 +69,20 @@ def match_specialty():
         return jsonify({"specialty": specialty})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+@app.route("/find-doctors", methods=["POST"])
+def find_doctors():
+    data = request.get_json()
+    specialty = data.get("specialty", "").lower()
+
+    # Sample mock doctor database
+    mock_doctors = [
+        {"name": "Dr. Emily Zhang", "specialty": "dermatologist", "location": "Downtown Clinic", "phone": "555-123-4567"},
+        {"name": "Dr. Raj Patel", "specialty": "cardiologist", "location": "Heart Health Center", "phone": "555-987-6543"},
+        {"name": "Dr. Maya Lopez", "specialty": "pediatrician", "location": "Family Care Pediatrics", "phone": "555-222-3344"},
+        {"name": "Dr. James Kim", "specialty": "otolaryngologist", "location": "Ear, Nose & Throat Associates", "phone": "555-333-2211"},
+        {"name": "Dr. Sarah Green", "specialty": "dentist", "location": "Bright Smile Dental", "phone": "555-456-7890"},
+    ]
+
+    matching_doctors = [doc for doc in mock_doctors if specialty in doc["specialty"].lower()]
+
+    return jsonify({"doctors": matching_doctors})
