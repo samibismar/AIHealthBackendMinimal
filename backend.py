@@ -143,6 +143,18 @@ def find_doctors_full():
         ]
     )
     specialty = specialty_response['choices'][0]['message']['content'].strip()
+    # Normalize GPT’s output to a valid NPI taxonomy_description
+    mapping = {
+        "general practitioner": "General Practice",
+        "primary care physician": "Family Practice",
+        "family physician": "Family Practice",
+        "internist": "Internal Medicine",
+        "neurologist": "Neurology",
+        "dentist": "Dentistry",
+        # …add more as needed…
+    }
+    lookup_key = specialty.lower()
+    taxonomy = mapping.get(lookup_key, specialty)
 
     # Query doctors
     npireg_response = requests.get(
@@ -150,7 +162,7 @@ def find_doctors_full():
         params={
             "version": "2.1",
             "limit": 10,
-            "taxonomy_description": specialty,
+            "taxonomy_description": taxonomy,
             "latitude": lat,
             "longitude": lon
         }
@@ -163,7 +175,7 @@ def find_doctors_full():
         address = addresses[0] if addresses else {}
         doctors.append({
             "name": f"{basic.get('first_name', '')} {basic.get('last_name', '')}".strip(),
-            "specialty": specialty,
+            "specialty": taxonomy,
             "location": f"{address.get('city', '')}, {address.get('state', '')}",
             "phone": address.get("telephone_number", "N/A")
         })
