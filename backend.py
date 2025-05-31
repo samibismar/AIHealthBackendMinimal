@@ -156,29 +156,37 @@ def find_doctors_full():
     lookup_key = specialty.lower()
     taxonomy = mapping.get(lookup_key, specialty)
 
-    # Query doctors
-    npireg_response = requests.get(
-        "https://npiregistry.cms.hhs.gov/api/",
-        params={
-            "version": "2.1",
-            "limit": 10,
-            "taxonomy_description": taxonomy,
-            "latitude": lat,
-            "longitude": lon
-        }
-    )
-    results = npireg_response.json().get("results", [])
+    # Build a list of candidate taxonomies, starting with our mapped value
+    candidates = [taxonomy, "General Practice", "Internal Medicine", "Pediatrics"]
+
     doctors = []
-    for r in results:
-        basic = r.get("basic", {})
-        addresses = r.get("addresses", [])
-        address = addresses[0] if addresses else {}
-        doctors.append({
-            "name": f"{basic.get('first_name', '')} {basic.get('last_name', '')}".strip(),
-            "specialty": taxonomy,
-            "location": f"{address.get('city', '')}, {address.get('state', '')}",
-            "phone": address.get("telephone_number", "N/A")
-        })
+    for candidate in candidates:
+        npireg_response = requests.get(
+            "https://npiregistry.cms.hhs.gov/api/",
+            params={
+                "version": "2.1",
+                "limit": 10,
+                "taxonomy_description": candidate,
+                "latitude": lat,
+                "longitude": lon,
+                "radius": 50
+            }
+        )
+        results = npireg_response.json().get("results", [])
+        if results:
+            # Found providers for this candidate taxonomy; build the list and stop
+            for r in results:
+                basic = r.get("basic", {})
+                addresses = r.get("addresses", [])
+                address = addresses[0] if addresses else {}
+                doctors.append({
+                    "name": f"{basic.get('first_name', '')} {basic.get('last_name', '')}".strip(),
+                    "specialty": candidate,
+                    "location": f"{address.get('city', '')}, {address.get('state', '')}",
+                    "phone": address.get("telephone_number", "N/A")
+                })
+            break  # exit the loop after finding a non-empty result
+    # If no results found in any candidate, doctors remains an empty list
 
     return jsonify({
         "explanation": explanation,
